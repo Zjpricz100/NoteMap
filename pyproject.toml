@@ -1,0 +1,19 @@
+[project]
+name = "notemap"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "anthropic",
+    "openai",
+    "pymupdf",
+    # "tree-sitter-languages",  # no Python 3.13 wheel yet; add back at Stage 1 code ingestion
+    "pydantic",
+    "python-dotenv",
+]
+
+[tool.setuptools.packages.find]
+include = ["notemap*"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"

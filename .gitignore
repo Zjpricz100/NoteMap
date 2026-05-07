@@ -1,0 +1,18 @@
+# generated artifacts
+data/
+
+# raw input notes
+notes/
+
+# python
+.env
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+
+# jupyter
+.ipynb_checkpoints/
+
+# macos
+.DS_Store

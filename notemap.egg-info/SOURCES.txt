@@ -1,0 +1,11 @@
+README.md
+pyproject.toml
+notemap/cache.py
+notemap/models.py
+notemap.egg-info/PKG-INFO
+notemap.egg-info/SOURCES.txt
+notemap.egg-info/dependency_links.txt
+notemap.egg-info/requires.txt
+notemap.egg-info/top_level.txt
+notemap/ingest/__init__.py
+notemap/ingest/pdf.py
