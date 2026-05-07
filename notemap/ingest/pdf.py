@@ -102,10 +102,10 @@ def ingest_pdf(pdf_path: Path, data_dir: Path, client: Anthropic, model: str = D
 
     return PDFDocument(source_path=pdf_path, file_hash=file_hash, pages=transcriptions)
 
-def save_pdfs(pdfs_dir: str, out_dir: str, client = Anthropic, model: str = DEFAULT_MODEL):
+def save_pdfs(pdfs_dir: Path, out_dir: Path, client = Anthropic, model: str = DEFAULT_MODEL):
     """Rasterizes + transcribes all pdfs and all pages pdfs_path and stores their JSONs in out_dir"""
-    input_path = Path(pdfs_dir)
-    output_path = Path(out_dir)
+    input_path = pdfs_dir
+    output_path = out_dir
     output_documents_path = output_path / "documents"
     
     output_documents_path.mkdir(parents=True, exist_ok=True)
