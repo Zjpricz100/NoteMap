@@ -57,11 +57,9 @@ def chunks_to_embeddings(
 def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, batch_size=BATCH_SIZE) -> tuple[np.ndarray, list[str]]:
     """Loads all embeddings, chunk_ids in data_dir. Order is preserved"""
     documents = load_documents(data_dir / "documents")
-    print("DOCUMENTS LOADED: ", len(documents))
     chunks = []
     for doc in documents:
         chunks.extend(chunks_from_pdf(doc))
     embeddings, chunk_ids = chunks_to_embeddings(chunks, data_dir, client, model, batch_size)
-    print("AMOUNT OF CHUNKS: ", len(embeddings))
     return embeddings, chunk_ids
     
