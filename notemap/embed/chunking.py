@@ -26,3 +26,11 @@ def chunks_from_pdf(doc : PDFDocument) -> list[Chunk]:
 
 def chunks_from_code(doc: CodeSummary) -> list[Chunk]:
     pass
+
+
+def load_documents(json_path: Path) -> list[PDFDocument]:
+    """Loads a list of documents from a json directory path."""
+    return [
+        PDFDocument.model_validate_json(path.read_text())
+        for path in Path(json_path).glob("*.json")
+    ]
