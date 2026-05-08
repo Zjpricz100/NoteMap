@@ -3,10 +3,12 @@ from notemap.embed.chunking import Chunk, load_documents, chunks_from_pdf, chunk
 from notemap.models import PDFDocument
 from notemap.cache import content_hash, cache_path
 import numpy as np
+import json
 from pathlib import Path
 
 DEFAULT_MODEL = "text-embedding-3-small"
 BATCH_SIZE = 256
+MANIFEST_PATH = "embeddings/manifest.json"
 
 def chunks_to_embeddings(
         chunks : list[Chunk], 
@@ -54,12 +56,23 @@ def chunks_to_embeddings(
 
 
 
+
 def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, batch_size=BATCH_SIZE) -> tuple[np.ndarray, list[str]]:
-    """Loads all embeddings, chunk_ids in data_dir. Order is preserved"""
+    """Loads all embeddings and chunk_ids in data_dir. Order is preserved. Writes manifest.json as a side-effect."""
     documents = load_documents(data_dir / "documents")
     chunks = []
     for doc in documents:
         chunks.extend(chunks_from_pdf(doc))
     embeddings, chunk_ids = chunks_to_embeddings(chunks, data_dir, client, model, batch_size)
+
+    manifest = [
+        {"chunk_id": c.chunk_id, "source_path": str(c.source_path), "page_number": c.page_number}
+        for c in chunks
+    ]
+    manifest_path = data_dir / MANIFEST_PATH
+    manifest_path.write_text(json.dumps(manifest))
+
     return embeddings, chunk_ids
+
+
     
