@@ -13,13 +13,13 @@ import sklearn.cluster as cluster
 from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score
 
 
-def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, seed=None):
+def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, min_distance=0.0, seed=None):
     """Reduces all embeddings to dimensionality dim"""
     reducer = umap.UMAP(
         n_neighbors=n_neighbors,
         n_components=n_components,
         metric='cosine',
-        min_dist=0.1,
+        min_dist=min_distance,
         random_state=seed,
         n_jobs=1
     )
@@ -49,10 +49,11 @@ def plot_embeddings(embeddings: np.ndarray, manifest_path: Path):
     )
     fig.show()
 
-def hdb_cluster(clusterable_embeddings: np.ndarray):
+def hdb_cluster(clusterable_embeddings: np.ndarray, min_samples: int, min_cluster_size: int, method: str="leaf"):
     labels = hdbscan.HDBSCAN(
-        min_samples=5,
-        min_cluster_size=15,
+        min_samples=min_samples,
+        min_cluster_size=min_cluster_size,
+        cluster_selection_method=method
     ).fit_predict(clusterable_embeddings)
     return labels
 
@@ -62,6 +63,7 @@ def plot_embedding_clusters(reduced_embeddings: np.ndarray, cluster_labels: np.n
     with open(manifest_path, 'r') as f:
         manifest = json.load(f)
 
+    
     clustered = cluster_labels >= 0
     df = pd.DataFrame({
         "x": reduced_embeddings[clustered, 0],
@@ -77,6 +79,9 @@ def plot_embedding_clusters(reduced_embeddings: np.ndarray, cluster_labels: np.n
         title="HDBSCAN Clusters of Document Embeddings",
     )
     fig.show()
+
+    noise_count = int((cluster_labels == -1).sum())
+    print(f"Unlabeled points: {noise_count}/{len(cluster_labels)}")
     
 
 
