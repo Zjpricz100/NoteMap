@@ -13,17 +13,19 @@ import sklearn.cluster as cluster
 from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score
 
 
-def umap_reduce(embeddings: np.ndarray, dim=2, seed=None):
+def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, seed=None):
     """Reduces all embeddings to dimensionality dim"""
     reducer = umap.UMAP(
-        n_neighbors=15,
-        n_components=dim,
+        n_neighbors=n_neighbors,
+        n_components=n_components,
         metric='cosine',
         min_dist=0.1,
         random_state=seed,
         n_jobs=1
     )
     return reducer.fit_transform(embeddings)
+
+
 
 def plot_embeddings(embeddings: np.ndarray, manifest_path: Path):
     """Scatter plots 2D embeddings colored by source document using plotly."""
@@ -46,6 +48,16 @@ def plot_embeddings(embeddings: np.ndarray, manifest_path: Path):
         title="UMAP projection of document embeddings",
     )
     fig.show()
+
+def hdb_cluster(clusterable_embeddings: np.ndarray):
+    labels = hdbscan.HDBSCAN(
+        min_samples=10,
+        min_cluster_size=500,
+    ).fit_predict(clusterable_embeddings)
+    return labels
+
+def plot_embedding_clusters(cluster_labels):
+    pass
 
 
     
