@@ -51,13 +51,33 @@ def plot_embeddings(embeddings: np.ndarray, manifest_path: Path):
 
 def hdb_cluster(clusterable_embeddings: np.ndarray):
     labels = hdbscan.HDBSCAN(
-        min_samples=10,
-        min_cluster_size=500,
+        min_samples=5,
+        min_cluster_size=15,
     ).fit_predict(clusterable_embeddings)
     return labels
 
-def plot_embedding_clusters(cluster_labels):
-    pass
+def plot_embedding_clusters(reduced_embeddings: np.ndarray, cluster_labels: np.ndarray, manifest_path: Path):
+    """Scatter plots 2d embeddings colored by HDBSCAN cluster label. Expects embeddings to be reduced to 2D"""
+    assert reduced_embeddings.shape[1] == 2
+    with open(manifest_path, 'r') as f:
+        manifest = json.load(f)
+
+    clustered = cluster_labels >= 0
+    df = pd.DataFrame({
+        "x": reduced_embeddings[clustered, 0],
+        "y": reduced_embeddings[clustered, 1],
+        "cluster": [str(l) for l in cluster_labels[clustered]],
+        "source_doc": [Path(m["source_path"]).name for m, c in zip(manifest, clustered) if c],
+        "page": [m["page_number"] for m, c in zip(manifest, clustered) if c],
+    })
+    fig = px.scatter(
+        df, x="x", y="y",
+        color="cluster",
+        hover_data=["source_doc", "page"],
+        title="HDBSCAN Clusters of Document Embeddings",
+    )
+    fig.show()
+    
 
 
     
