@@ -82,6 +82,8 @@ def plot_embedding_clusters(reduced_embeddings: np.ndarray, cluster_labels: np.n
 
     noise_count = int((cluster_labels == -1).sum())
     print(f"Unlabeled points: {noise_count}/{len(cluster_labels)}")
+
+
     
 
 

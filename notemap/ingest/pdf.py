@@ -98,7 +98,7 @@ def ingest_pdf(pdf_path: Path, data_dir: Path, client: Anthropic, model: str = D
                 transcription=text,
             )
         )
-        print(f"  page {page_number}: {'(cached)' if was_cached else 'transcribed'}")
+        #print(f"  page {page_number}: {'(cached)' if was_cached else 'transcribed'}")
 
     return PDFDocument(source_path=pdf_path, file_hash=file_hash, pages=transcriptions)
 
