@@ -14,10 +14,22 @@ async function getGraphData() {
     }
 }
 
+async function centerCamera(renderer: Sigma) {
+    const camera = renderer.getCamera();
+    camera.setState({
+        x: 0.7,
+        y: 0.5,
+        ratio: 1
+    });
+}
+
 const graphData = await getGraphData();
 const graph = new Graph();
-graph.import(graphData);
 const renderer = new Sigma(graph, document.getElementById("container") as HTMLElement);
+
+graph.import(graphData);
+renderer.refresh();
+centerCamera(renderer);
 
 
 
