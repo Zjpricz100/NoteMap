@@ -67,7 +67,10 @@ def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, bat
     chunks = list({c.chunk_id : c for c in chunks}.values())
     embeddings, chunk_ids = chunks_to_embeddings(chunks, data_dir, client, model, batch_size)
 
-    manifest = [{
+    manifest = {}
+    manifest_path = data_dir / MANIFEST_PATH
+
+    chunk_data = [{
             "chunk_id": c.chunk_id, 
             "source_path": str(c.source_path), 
             "page_number": c.page_number,
@@ -77,7 +80,8 @@ def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, bat
         }
         for c in chunks
     ]
-    manifest_path = data_dir / MANIFEST_PATH
+    manifest["chunks"] = chunk_data
+
     manifest_path.write_text(json.dumps(manifest))
 
     return embeddings, chunk_ids

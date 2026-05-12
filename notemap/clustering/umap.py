@@ -42,13 +42,15 @@ def plot_embeddings(embeddings: np.ndarray, manifest_path: Path):
     assert embeddings.shape[1] == 2
     with open(manifest_path, 'r') as f:
         manifest = json.load(f)
+    
+    data_chunks = manifest["chunks"]
 
     df = pd.DataFrame({
         "x": embeddings[:, 0],
         "y": embeddings[:, 1],
-        "source_doc": [Path(m["source_path"]).name for m in manifest],
-        "chunk_id": [m["chunk_id"] for m in manifest],
-        "page": [m["page_number"] for m in manifest],
+        "source_doc": [Path(m["source_path"]).name for m in data_chunks],
+        "chunk_id": [m["chunk_id"] for m in data_chunks],
+        "page": [m["page_number"] for m in data_chunks],
     })
 
     fig = px.scatter(
@@ -73,14 +75,16 @@ def plot_embedding_clusters(reduced_embeddings: np.ndarray, cluster_labels: np.n
     with open(manifest_path, 'r') as f:
         manifest = json.load(f)
 
+    data_chunks = manifest["chunks"]
+
     
     clustered = cluster_labels >= 0
     df = pd.DataFrame({
         "x": reduced_embeddings[clustered, 0],
         "y": reduced_embeddings[clustered, 1],
         "cluster": [str(l) for l in cluster_labels[clustered]],
-        "source_doc": [Path(m["source_path"]).name for m, c in zip(manifest, clustered) if c],
-        "page": [m["page_number"] for m, c in zip(manifest, clustered) if c],
+        "source_doc": [Path(m["source_path"]).name for m, c in zip(data_chunks, clustered) if c],
+        "page": [m["page_number"] for m, c in zip(data_chunks, clustered) if c],
     })
     fig = px.scatter(
         df, x="x", y="y",

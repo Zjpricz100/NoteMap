@@ -55,18 +55,17 @@ def create_layout(embeddings: np.ndarray,
 
     # Update manifest with centroid nodes
     create_centroid_nodes(reduced_embeddings_2d, node_labels, k=5)
-    centroid_labels = np.array(list(range(num_clusters)), dtype=np.int64)
-    node_labels = np.hstack((node_labels, centroid_labels))
-
-
 
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
+
+    data_chunks = manifest["chunks"]
+    data_centroid_chunks = manifest["centroid_chunks"]
     
     nodes = []
-    for i, (row, label) in enumerate(zip(manifest, node_labels)):
+    for i, (row, label) in enumerate(zip(data_chunks, node_labels)):
         chunk_type = row['chunk_type']
-        if label >= 0 and chunk_type == "Adjacent":
+        if label >= 0:
             nodes.append({
                 "key": row['chunk_id'],
                 "attributes": {
@@ -77,7 +76,9 @@ def create_layout(embeddings: np.ndarray,
                     "label": str(row['source_path'])
                 }
             })
-        elif label >= 0 and chunk_type == "Centroid":
+
+    for i, (row, label) in enumerate(zip(data_centroid_chunks, range(num_clusters))):
+        if label >= 0:
             nodes.append({
                 "key": row['chunk_id'],
                 "attributes": {
@@ -104,7 +105,7 @@ def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.nda
     with open(MANIFEST_PATH, 'r') as f:
         data = json.load(f)
 
-    data = [entry for entry in data if entry.get('chunk_type') != 'Centroid']
+    centroid_chunks = []
 
     for label in range(num_clusters):
         nodes_in_cluster = reduced_embeddings_2d[node_labels == label]
@@ -119,7 +120,9 @@ def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.nda
             "x": float(centroid_x),
             "y": float(centroid_y)
         }
-        data.append(centroid_entry)
+        centroid_chunks.append(centroid_entry)
+
+    data["centroid_chunks"] = centroid_chunks
 
     with open(MANIFEST_PATH, 'w') as f:
         json.dump(data, f)
