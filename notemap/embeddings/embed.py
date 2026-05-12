@@ -1,5 +1,5 @@
 from openai import OpenAI
-from notemap.embed.chunking import Chunk, load_documents, chunks_from_pdf, chunks_from_code
+from notemap.embeddings.chunking import Chunk, load_documents, chunks_from_pdf, chunks_from_code
 from notemap.models import PDFDocument
 from notemap.cache import content_hash, cache_path
 import numpy as np
@@ -63,6 +63,8 @@ def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, bat
     chunks = []
     for doc in documents:
         chunks.extend(chunks_from_pdf(doc))
+
+    chunks = list({c.chunk_id : c for c in chunks}.values())
     embeddings, chunk_ids = chunks_to_embeddings(chunks, data_dir, client, model, batch_size)
 
     manifest = [

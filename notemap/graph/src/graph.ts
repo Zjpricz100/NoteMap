@@ -1,27 +1,27 @@
 import Graph from "graphology";
 import Sigma from "sigma";
 
+async function getGraphData() {
+    try {
+        const response = await fetch("./layout.json");
+        if (!response.ok) throw new Error("Network Response Failed");
+
+        const data = await response.json();
+        return data
+
+    } catch (error) {
+        console.log("Failed to load JSON: ", error);
+    }
+}
+
+const graphData = await getGraphData();
 const graph = new Graph();
-
-// a method to add nodes 
-graph.addNode('A', {
-    label: 'A', 
-    color: 'blue',
-    size: 10,
-    x: 0,
-    y: 1
-})
-graph.addNode('B', {
-    label: 'B', 
-    color: 'Red',
-    size: 10,
-    x: 1,
-    y: 1
-})
-
-graph.addEdge("A", "B", {size: 1, color: 'white'})
-
-
-
-
+graph.import(graphData);
 const renderer = new Sigma(graph, document.getElementById("container") as HTMLElement);
+
+
+
+
+
+
+
