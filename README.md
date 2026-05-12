@@ -1,6 +1,7 @@
 # NoteMap
-
-<img width="600" height="400" alt="image" align="center" src="https://github.com/user-attachments/assets/d9c0fc8a-9c12-404a-9cbb-e5c2f050f033" />
+<p align="center">
+<img width="578" height="499" alt="image" src="https://github.com/user-attachments/assets/4ede21b5-0dfa-4367-ae90-955079516de7">
+/p>
 
 
 A personal knowledge map that transforms scattered notes into a navigable, clustered graph. Inspired by the Path of Exile skill tree, but for your own ML/engineering/domain knowledge.
