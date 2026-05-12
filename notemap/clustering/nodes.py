@@ -64,7 +64,6 @@ def create_layout(embeddings: np.ndarray,
     
     nodes = []
     for i, (row, label) in enumerate(zip(data_chunks, node_labels)):
-        chunk_type = row['chunk_type']
         if label >= 0:
             nodes.append({
                 "key": row['chunk_id'],
@@ -116,7 +115,6 @@ def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.nda
             "chunk_id": str(label),
             "source_path": "CENTROID",
             "page_number": "N/A",
-            "chunk_type": "Centroid",
             "x": float(centroid_x),
             "y": float(centroid_y)
         }

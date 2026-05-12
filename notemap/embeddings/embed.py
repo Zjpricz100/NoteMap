@@ -74,7 +74,6 @@ def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, bat
             "chunk_id": c.chunk_id, 
             "source_path": str(c.source_path), 
             "page_number": c.page_number,
-            "chunk_type": "Adjacent", # Non Centroid Nodes
             "x": None, # filled
             "y": None
         }
