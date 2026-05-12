@@ -2,6 +2,7 @@ from notemap.clustering.umap import *
 from notemap.embeddings.embed import MANIFEST_PATH
 import json
 from bokeh.palettes import Category20
+import glasbey
 
 #COLOR_DICT = {i: color for i, color in enumerate(Viridis256)}
 LAYOUT_PATH = "notemap/graph/layout.json"
@@ -24,12 +25,15 @@ def create_layout(embeddings: np.ndarray,
         seed=SEED)
 
 
+
     node_labels = hdb_cluster(
         reduced_embeddings, 
-        min_samples=hdb_params["min_samples"],
+        min_samples=1,
         min_cluster_size=hdb_params["min_cluster_size"],
         method=hdb_params["method"]
     )
+
+    reduced_embeddings_2d = pca_reduce(embeddings, n_components=2)
 
     reduced_embeddings_2d = umap_reduce(
         embeddings, 
@@ -44,7 +48,7 @@ def create_layout(embeddings: np.ndarray,
 
     # Setting up categorical colors
     num_clusters = int(node_labels.max()) + 1
-    palette = Category20[num_clusters]
+    palette = glasbey.create_palette(palette_size=256)
     color_dict = {i : color for i, color in enumerate(palette)}
 
     assert reduced_embeddings_2d.shape[1] == 2

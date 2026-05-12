@@ -35,6 +35,39 @@ graph.import(graphData);
 
 renderer.refresh();
 centerCamera(renderer);
+buildLegend(graphData);
+
+function buildLegend(data: any) {
+    const legendEl = document.getElementById("legend")!;
+
+    const title = document.createElement("div");
+    title.className = "legend-title";
+    title.textContent = "Clusters";
+    legendEl.appendChild(title);
+
+    // Centroid nodes use their cluster index as their key ("0", "1", ...)
+    const clusters: { id: number; color: string }[] = data.nodes
+        .filter((n: any) => /^\d+$/.test(n.key))
+        .map((n: any) => ({ id: parseInt(n.key), color: n.attributes.color }))
+        .sort((a: any, b: any) => a.id - b.id);
+
+    for (const cluster of clusters) {
+        const item = document.createElement("div");
+        item.className = "legend-item";
+
+        const swatch = document.createElement("span");
+        swatch.className = "legend-swatch";
+        swatch.style.backgroundColor = cluster.color;
+
+        const label = document.createElement("span");
+        label.className = "legend-label";
+        label.textContent = `Cluster ${cluster.id}`;
+
+        item.appendChild(swatch);
+        item.appendChild(label);
+        legendEl.appendChild(item);
+    }
+}
 
 
 

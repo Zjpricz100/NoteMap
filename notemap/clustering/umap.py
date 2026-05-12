@@ -15,7 +15,7 @@ from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score
 
 
 def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, min_distance=0.0, spread=1.0, seed=None):
-    """Reduces all embeddings to dimensionality dim"""
+    """Reduces all embeddings to dimensionality dim using UMAP"""
     reducer = umap.UMAP(
         n_neighbors=n_neighbors,
         n_components=n_components,
@@ -24,6 +24,14 @@ def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, min_distance=
         random_state=seed,
         spread=spread,  
         n_jobs=1
+    )
+    return reducer.fit_transform(embeddings)
+
+def pca_reduce(embeddings: np.ndarray, n_components, seed=None):
+    """Reduces all embeddings to dimensionality dim using PCA"""
+    reducer = PCA(
+        n_components=n_components,
+        random_state=seed
     )
     return reducer.fit_transform(embeddings)
 
