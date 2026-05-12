@@ -1,5 +1,6 @@
 import Graph from "graphology";
 import Sigma from "sigma";
+import noverlap from "graphology-layout-noverlap";
 
 async function getGraphData() {
     try {
@@ -30,6 +31,8 @@ const renderer = new Sigma(graph, document.getElementById("container") as HTMLEl
 });
 
 graph.import(graphData);
+//noverlap.assign(graph, {maxIterations: 50, settings: {margin:5}});
+
 renderer.refresh();
 centerCamera(renderer);
 

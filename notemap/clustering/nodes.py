@@ -36,6 +36,7 @@ def create_layout(embeddings: np.ndarray,
         n_neighbors=umap2_params["n_neighbors"], 
         n_components=umap2_params["n_components"], 
         min_distance=umap2_params["min_distance"], 
+        spread=1.0,
         seed=SEED)
     
     noise_count = int((node_labels == -1).sum())
@@ -48,18 +49,37 @@ def create_layout(embeddings: np.ndarray,
 
     assert reduced_embeddings_2d.shape[1] == 2
 
+    # Update manifest with centroid nodes
+    create_centroid_nodes(reduced_embeddings_2d, node_labels, k=5)
+    centroid_labels = np.array(list(range(num_clusters)), dtype=np.int64)
+    node_labels = np.hstack((node_labels, centroid_labels))
+
+
+
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
     
     nodes = []
     for i, (row, label) in enumerate(zip(manifest, node_labels)):
-        if label >= 0:
+        chunk_type = row['chunk_type']
+        if label >= 0 and chunk_type == "Adjacent":
             nodes.append({
                 "key": row['chunk_id'],
                 "attributes": {
                     "x": float(reduced_embeddings_2d[i, 0]),
                     "y": float(reduced_embeddings_2d[i, 1]),
                     "size": 8,
+                    "color": str(color_dict[label]),
+                    "label": str(row['source_path'])
+                }
+            })
+        elif label >= 0 and chunk_type == "Centroid":
+            nodes.append({
+                "key": row['chunk_id'],
+                "attributes": {
+                    "x": row['x'],
+                    "y": row['y'],
+                    "size": 16,
                     "color": str(color_dict[label]),
                     "label": str(row['source_path'])
                 }
@@ -71,6 +91,33 @@ def create_layout(embeddings: np.ndarray,
     # Write to json layout file for Sigma to render
     data = {"nodes": nodes, "edges": edges}
     with open(LAYOUT_PATH, "w") as f:
+        json.dump(data, f)
+
+def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.ndarray, k:int=5) -> None:
+    assert(reduced_embeddings_2d.shape[1] == 2)
+    num_clusters = int(node_labels.max()) + 1
+
+    with open(MANIFEST_PATH, 'r') as f:
+        data = json.load(f)
+
+    data = [entry for entry in data if entry.get('chunk_type') != 'Centroid']
+
+    for label in range(num_clusters):
+        nodes_in_cluster = reduced_embeddings_2d[node_labels == label]
+        centroid_x = nodes_in_cluster[:, 0].mean()
+        centroid_y = nodes_in_cluster[:, 1].mean()
+
+        centroid_entry = {
+            "chunk_id": str(label),
+            "source_path": "CENTROID",
+            "page_number": "N/A",
+            "chunk_type": "Centroid",
+            "x": float(centroid_x),
+            "y": float(centroid_y)
+        }
+        data.append(centroid_entry)
+
+    with open(MANIFEST_PATH, 'w') as f:
         json.dump(data, f)
 
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 DEFAULT_MODEL = "text-embedding-3-small"
 BATCH_SIZE = 256
-MANIFEST_PATH = "embeddings/manifest.json"
+MANIFEST_PATH = Path(__file__).resolve().parents[2] / "data" / "embeddings" / "manifest.json"
 
 def chunks_to_embeddings(
         chunks : list[Chunk], 
@@ -67,14 +67,19 @@ def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, bat
     chunks = list({c.chunk_id : c for c in chunks}.values())
     embeddings, chunk_ids = chunks_to_embeddings(chunks, data_dir, client, model, batch_size)
 
-    manifest = [
-        {"chunk_id": c.chunk_id, "source_path": str(c.source_path), "page_number": c.page_number}
+    manifest = [{
+            "chunk_id": c.chunk_id, 
+            "source_path": str(c.source_path), 
+            "page_number": c.page_number,
+            "chunk_type": "Adjacent", # Non Centroid Nodes
+            "x": None, # filled
+            "y": None
+        }
         for c in chunks
     ]
     manifest_path = data_dir / MANIFEST_PATH
     manifest_path.write_text(json.dumps(manifest))
 
     return embeddings, chunk_ids
-
 
     

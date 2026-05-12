@@ -5,6 +5,7 @@ import pandas as pd
 import plotly.express as px
 import json
 from pathlib import Path
+from notemap.embeddings.embed import MANIFEST_PATH
 
 # Dimension reduction and clustering libraries
 import umap
@@ -13,7 +14,7 @@ import sklearn.cluster as cluster
 from sklearn.metrics import adjusted_rand_score, adjusted_mutual_info_score
 
 
-def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, min_distance=0.0, seed=None):
+def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, min_distance=0.0, spread=1.0, seed=None):
     """Reduces all embeddings to dimensionality dim"""
     reducer = umap.UMAP(
         n_neighbors=n_neighbors,
@@ -21,6 +22,7 @@ def umap_reduce(embeddings: np.ndarray, n_neighbors, n_components, min_distance=
         metric='cosine',
         min_dist=min_distance,
         random_state=seed,
+        spread=spread,  
         n_jobs=1
     )
     return reducer.fit_transform(embeddings)
@@ -84,7 +86,6 @@ def plot_embedding_clusters(reduced_embeddings: np.ndarray, cluster_labels: np.n
     print(f"Unlabeled points: {noise_count}/{len(cluster_labels)}")
 
 
-    
 
 
-    
+

@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "graphology": "^0.26.0",
+    "graphology-layout-noverlap": "^0.4.2",
     "sigma": "^3.0.3"
   }
 }
