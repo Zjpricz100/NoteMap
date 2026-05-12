@@ -59,7 +59,7 @@ def create_layout(embeddings: np.ndarray,
                 "attributes": {
                     "x": float(reduced_embeddings_2d[i, 0]),
                     "y": float(reduced_embeddings_2d[i, 1]),
-                    "size": 10,
+                    "size": 8,
                     "color": str(color_dict[label]),
                     "label": str(row['source_path'])
                 }

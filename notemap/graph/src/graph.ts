@@ -25,7 +25,9 @@ async function centerCamera(renderer: Sigma) {
 
 const graphData = await getGraphData();
 const graph = new Graph();
-const renderer = new Sigma(graph, document.getElementById("container") as HTMLElement);
+const renderer = new Sigma(graph, document.getElementById("container") as HTMLElement, {
+    labelRenderedSizeThreshold: 100
+});
 
 graph.import(graphData);
 renderer.refresh();
