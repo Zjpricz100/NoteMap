@@ -3,6 +3,7 @@ from notemap.embeddings.embed import MANIFEST_PATH
 import json
 from bokeh.palettes import Category20
 import glasbey
+from sklearn.neighbors import NearestNeighbors
 
 #COLOR_DICT = {i: color for i, color in enumerate(Viridis256)}
 LAYOUT_PATH = "notemap/graph/layout.json"
@@ -43,6 +44,7 @@ def create_layout(embeddings: np.ndarray,
         spread=1.0,
         seed=SEED)
     
+    
     noise_count = int((node_labels == -1).sum())
     print(f"Unlabeled points: {noise_count}/{len(node_labels)}")
 
@@ -53,14 +55,18 @@ def create_layout(embeddings: np.ndarray,
 
     assert reduced_embeddings_2d.shape[1] == 2
 
-    # Update manifest with centroid nodes
-    create_centroid_nodes(reduced_embeddings_2d, node_labels, k=5)
+
+    with open(MANIFEST_PATH, 'r') as f:
+        manifest = json.load(f)
+    data_chunks = manifest["chunks"]
+    create_centroid_nodes(reduced_embeddings_2d, node_labels, data_chunks, k=5)
 
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
 
-    data_chunks = manifest["chunks"]
     data_centroid_chunks = manifest["centroid_chunks"]
+
+    # Update manifest with centroid nodes
     
     nodes = []
     for i, (row, label) in enumerate(zip(data_chunks, node_labels)):
@@ -72,9 +78,10 @@ def create_layout(embeddings: np.ndarray,
                     "y": float(reduced_embeddings_2d[i, 1]),
                     "size": 8,
                     "color": str(color_dict[label]),
-                    "label": str(row['source_path'])
+                    "label": str(row['summary'])
                 }
             })
+    
 
     for i, (row, label) in enumerate(zip(data_centroid_chunks, range(num_clusters))):
         if label >= 0:
@@ -85,7 +92,7 @@ def create_layout(embeddings: np.ndarray,
                     "y": row['y'],
                     "size": 16,
                     "color": str(color_dict[label]),
-                    "label": str(row['source_path'])
+                    "label": str(row['summary'])
                 }
             })
     
@@ -97,32 +104,46 @@ def create_layout(embeddings: np.ndarray,
     with open(LAYOUT_PATH, "w") as f:
         json.dump(data, f)
 
-def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.ndarray, k:int=5) -> None:
+def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.ndarray, data_chunks: list[dict], k:int=1) -> None:
     assert(reduced_embeddings_2d.shape[1] == 2)
     num_clusters = int(node_labels.max()) + 1
 
     with open(MANIFEST_PATH, 'r') as f:
         data = json.load(f)
 
-    centroid_chunks = []
+    centroid_nodes = []
 
     for label in range(num_clusters):
-        nodes_in_cluster = reduced_embeddings_2d[node_labels == label]
+        label_mask = node_labels == label
+        node_indices = np.where(label_mask)[0]
+        nodes_in_cluster = reduced_embeddings_2d[label_mask]
+        nearest_neighbors_in_cluster = NearestNeighbors(n_neighbors=k, algorithm="ball_tree").fit(nodes_in_cluster)
+
         centroid_x = nodes_in_cluster[:, 0].mean()
         centroid_y = nodes_in_cluster[:, 1].mean()
+        centroid = np.array([[centroid_x, centroid_y]])
+        _, indices = nearest_neighbors_in_cluster.kneighbors(centroid) # Get the k nearest neighbors to this centroid
+
+        # We for now use the first nearest neighbor as the cluster centroid summary. This will be changed to be more comprehensive later!
+        closest_idx = indices[0, 0]
+        original_idx = node_indices[closest_idx]
+        closest_node = data_chunks[original_idx]
+
 
         centroid_entry = {
             "chunk_id": str(label),
             "source_path": "CENTROID",
             "page_number": "N/A",
+            "text": "N/A",
+            "summary": closest_node["summary"],
             "x": float(centroid_x),
             "y": float(centroid_y)
         }
-        centroid_chunks.append(centroid_entry)
+        centroid_nodes.append(centroid_entry)
 
-    data["centroid_chunks"] = centroid_chunks
+    data["centroid_chunks"] = centroid_nodes
+
 
     with open(MANIFEST_PATH, 'w') as f:
         json.dump(data, f)
-
 

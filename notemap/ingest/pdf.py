@@ -1,7 +1,9 @@
 import base64
+import json
 import tempfile
 from pathlib import Path
 import os
+import re
 
 import fitz  # pymupdf
 from anthropic import Anthropic
@@ -11,11 +13,28 @@ from notemap.models import PageTranscription, PDFDocument
 
 DPI = 150
 DEFAULT_MODEL = "claude-sonnet-4-6"
+
+# Prompt for our model. We specify XML formatting for output so the LLM is able to easily attach its transcription.
 TRANSCRIPTION_PROMPT = (
     "Transcribe exactly what is handwritten or printed on this page to markdown. "
     "Preserve structure, headings, lists, equations, and diagrams as faithfully as possible "
-    "using markdown conventions. Output only the transcription — no commentary."
+    "using markdown conventions. Additionally give a 3-5 word summary of that document.\n\n"
+    "Respond in this exact format, with no other text before or after:\n\n"
+    "<summary>3-5 word summary here</summary>\n"
+    "<document>\n"
+    "full markdown transcription here\n"
+    "</document>"
 )
+
+def parse_response(text):
+    summary_match = re.search(r'<summary>(.*?)</summary>', text, re.DOTALL)
+    document_match = re.search(r'<document>(.*?)</document>', text, re.DOTALL)
+    
+    summary = summary_match.group(1).strip() if summary_match else "N/A"
+    document = document_match.group(1).strip() if document_match else "N/A"
+    
+    return summary, document
+
 
 
 def rasterize_pdf(pdf_path: Path) -> list[tuple[int, bytes]]:
@@ -37,10 +56,11 @@ def transcribe_page(
     image_hash: str,
     model: str = DEFAULT_MODEL,
 ) -> str:
-    """Return markdown transcription, using cache if available."""
-    cached = cache_path(data_dir, "transcriptions", image_hash, ".md")
+    """Return (summary, transcription), using cache if available."""
+    cached = cache_path(data_dir, "transcriptions", image_hash, ".json")
     if cached.exists():
-        return cached.read_text(encoding="utf-8")
+        data = json.loads(cached.read_text(encoding="utf-8"))
+        return data["summary"], data["transcription"]
 
     b64 = base64.standard_b64encode(image_bytes).decode("utf-8")
     response = client.messages.create(
@@ -58,12 +78,14 @@ def transcribe_page(
     )
     text = response.content[0].text
 
+    summary, transcription = parse_response(text)
+
     # Atomic write: temp file → rename
     tmp = cached.with_suffix(".tmp")
-    tmp.write_text(text, encoding="utf-8")
+    tmp.write_text(json.dumps({"summary": summary, "transcription": transcription}), encoding="utf-8")
     tmp.rename(cached)
 
-    return text
+    return summary, transcription
 
 
 def ingest_pdf(pdf_path: Path, data_dir: Path, client: Anthropic, model: str = DEFAULT_MODEL) -> PDFDocument:
@@ -87,15 +109,16 @@ def ingest_pdf(pdf_path: Path, data_dir: Path, client: Anthropic, model: str = D
             tmp.write_bytes(png_bytes)
             tmp.rename(img_path)
 
-        was_cached = cache_path(data_dir, "transcriptions", image_hash, ".md").exists()
-        text = transcribe_page(png_bytes, client, data_dir, image_hash, model=model)
+        was_cached = cache_path(data_dir, "transcriptions", image_hash, ".json").exists()
+        summary, transcription = transcribe_page(png_bytes, client, data_dir, image_hash, model=model)
 
         transcriptions.append(
             PageTranscription(
                 page_number=page_number,
                 image_path=img_path,
                 image_hash=image_hash,
-                transcription=text,
+                transcription=transcription,
+                summary=summary
             )
         )
         #print(f"  page {page_number}: {'(cached)' if was_cached else 'transcribed'}")

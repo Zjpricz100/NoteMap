@@ -7,6 +7,7 @@ class PageTranscription(BaseModel):
     image_path: Path       # data/pages/{hash}.png
     image_hash: str        # sha256 of PNG bytes
     transcription: str     # markdown from vision LLM
+    summary: str # 3-5 word summary of this page
 
 
 class PDFDocument(BaseModel):

@@ -9,6 +9,7 @@ class Chunk(BaseModel):
     source_type: str # "pdf_page", "code_chunk"
     page_number: int | None # None for pdfs for now
     text: str # The actual content of the chunk
+    summary: str # 3-5 word summary of the content of this chunk
     
 
 def chunks_from_pdf(doc : PDFDocument) -> list[Chunk]:
@@ -20,7 +21,8 @@ def chunks_from_pdf(doc : PDFDocument) -> list[Chunk]:
             source_path=doc.source_path,
             source_type="pdf_page",
             page_number=page_num + 1,
-            text=page.transcription
+            text=page.transcription,
+            summary=page.summary
         ))
     return chunks
 

@@ -48,8 +48,10 @@ function buildLegend(data: any) {
     // Centroid nodes use their cluster index as their key ("0", "1", ...)
     const clusters: { id: number; color: string }[] = data.nodes
         .filter((n: any) => /^\d+$/.test(n.key))
-        .map((n: any) => ({ id: parseInt(n.key), color: n.attributes.color }))
+        .map((n: any) => ({ id: n.attributes.label, color: n.attributes.color }))
         .sort((a: any, b: any) => a.id - b.id);
+
+    console.log(data.nodes)
 
     for (const cluster of clusters) {
         const item = document.createElement("div");
@@ -61,7 +63,7 @@ function buildLegend(data: any) {
 
         const label = document.createElement("span");
         label.className = "legend-label";
-        label.textContent = `Cluster ${cluster.id}`;
+        label.textContent = `${cluster.id}`;
 
         item.appendChild(swatch);
         item.appendChild(label);
