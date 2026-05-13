@@ -37,14 +37,20 @@ def create_layout(embeddings: np.ndarray,
     reduced_embeddings_2d = pca_reduce(embeddings, n_components=2)
 
     reduced_embeddings_2d = umap_reduce(
-        embeddings, 
-        n_neighbors=umap2_params["n_neighbors"], 
-        n_components=umap2_params["n_components"], 
-        min_distance=umap2_params["min_distance"], 
+        embeddings,
+        n_neighbors=umap2_params["n_neighbors"],
+        n_components=umap2_params["n_components"],
+        min_distance=umap2_params["min_distance"],
         spread=1.0,
         seed=SEED)
-    
-    
+
+    CANVAS = 100.0
+    for dim in range(2):
+        col = reduced_embeddings_2d[:, dim]
+        lo, hi = col.min(), col.max()
+        if hi > lo:
+            reduced_embeddings_2d[:, dim] = (col - lo) / (hi - lo) * 2 * CANVAS - CANVAS
+
     noise_count = int((node_labels == -1).sum())
     print(f"Unlabeled points: {noise_count}/{len(node_labels)}")
 
