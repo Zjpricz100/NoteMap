@@ -4,6 +4,8 @@ import json
 from bokeh.palettes import Category20
 import glasbey
 from sklearn.neighbors import NearestNeighbors
+from anthropic import Anthropic
+
 
 #COLOR_DICT = {i: color for i, color in enumerate(Viridis256)}
 LAYOUT_PATH = "notemap/graph/layout.json"
@@ -11,7 +13,7 @@ COLOR_SPACE_AMT = 256
 
 
 def create_layout(embeddings: np.ndarray,
-                  hdb_params: dict, umap1_params: dict, umap2_params: dict, SEED):
+                  hdb_params: dict, umap1_params: dict, umap2_params: dict, client: Anthropic, model: str, SEED):
     """Builds an importable Serialized Graph object for Graphology. Embeddings are EXPECTED to be 2D.
     hdb params are passed in as a dictionary.
     umap params are passed in as a dictionary with umap1 being transformation 1 and umap2 being transformation 2.
@@ -43,6 +45,7 @@ def create_layout(embeddings: np.ndarray,
         min_distance=umap2_params["min_distance"],
         spread=1.0,
         seed=SEED)
+    
 
     CANVAS = 100.0
     for dim in range(2):
@@ -65,7 +68,7 @@ def create_layout(embeddings: np.ndarray,
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
     data_chunks = manifest["chunks"]
-    create_centroid_nodes(reduced_embeddings_2d, node_labels, data_chunks, k=5)
+    create_centroid_nodes(reduced_embeddings_2d, node_labels, data_chunks, client, model, k=5)
 
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
@@ -110,7 +113,7 @@ def create_layout(embeddings: np.ndarray,
     with open(LAYOUT_PATH, "w") as f:
         json.dump(data, f)
 
-def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.ndarray, data_chunks: list[dict], k:int=1) -> None:
+def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.ndarray, data_chunks: list[dict], client: Anthropic, model: str, k:int=5) -> None:
     assert(reduced_embeddings_2d.shape[1] == 2)
     num_clusters = int(node_labels.max()) + 1
 
@@ -118,38 +121,91 @@ def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.nda
         data = json.load(f)
 
     centroid_nodes = []
+    print(reduced_embeddings_2d.shape)
+    print(node_labels.shape)
+    print("Number of Clusters: ", num_clusters)
 
+    clusters = []
     for label in range(num_clusters):
         label_mask = node_labels == label
         node_indices = np.where(label_mask)[0]
-        nodes_in_cluster = reduced_embeddings_2d[label_mask]
-        nearest_neighbors_in_cluster = NearestNeighbors(n_neighbors=k, algorithm="ball_tree").fit(nodes_in_cluster)
+        nodes_in_cluster = reduced_embeddings_2d[node_indices]
+        nn_cluster = NearestNeighbors(n_neighbors=k, algorithm="ball_tree").fit(nodes_in_cluster)
 
         centroid_x = nodes_in_cluster[:, 0].mean()
         centroid_y = nodes_in_cluster[:, 1].mean()
         centroid = np.array([[centroid_x, centroid_y]])
-        _, indices = nearest_neighbors_in_cluster.kneighbors(centroid) # Get the k nearest neighbors to this centroid
 
-        # We for now use the first nearest neighbor as the cluster centroid summary. This will be changed to be more comprehensive later!
-        closest_idx = indices[0, 0]
-        original_idx = node_indices[closest_idx]
-        closest_node = data_chunks[original_idx]
+        # indices is (n_queries, k)
+        _, indices = nn_cluster.kneighbors(centroid) # Get the k nearest neighbors to this centroid
+        original_indices = node_indices[indices[0]]
+        nearest_neighbors_in_cluster = [data_chunks[i] for i in original_indices]
 
 
+        summaries_in_cluster = [c["summary"] for c in nearest_neighbors_in_cluster]
+        cluster = {"id" : label, "summaries" : summaries_in_cluster, "x": centroid_x, "y": centroid_y}
+        clusters.append(cluster)
+    
+
+    # Label each cluster with the LLM model
+    print("Generating Cluster Labels... ")
+    label_response = label_clusters(clusters, client, model)
+    print("Cluster Labels Generated")
+
+    for cluster in clusters:
         centroid_entry = {
-            "chunk_id": str(label),
+            "chunk_id": cluster["id"],
             "source_path": "CENTROID",
             "page_number": "N/A",
             "text": "N/A",
-            "summary": closest_node["summary"],
-            "x": float(centroid_x),
-            "y": float(centroid_y)
+            "summary": label_response[cluster["id"]],
+            "x": float(cluster["x"]),
+            "y": float(cluster["y"])
         }
         centroid_nodes.append(centroid_entry)
 
     data["centroid_chunks"] = centroid_nodes
 
-
     with open(MANIFEST_PATH, 'w') as f:
         json.dump(data, f)
 
+def build_prompt(clusters: list[dict]) -> str:
+    """
+    Builds a prompt to send to a client LLM for labeling
+
+    Each cluster in clusters should be a dictionary with keys id and summaries
+    """
+    lines = []
+    for c in clusters:
+        summaries = c["summaries"]
+        id = c["id"]
+        lines.append(
+            f'Cluster {id}:\n'
+            f'Summaries {", ".join(summaries)}\n'
+        )
+    cluster_block = "\n\n".join(lines)
+
+    return f"""You will be given several clusters of documents. Each cluster has a numerical id and a representative summary. Produce a short, descriptive label (2-3 words) for each cluster that captures what unifies the documents in it.
+
+    {cluster_block}
+
+    Respond with ONLY a JSON array of objects, one per cluster, in the same order:
+    [{{"id": 0, "label": "..."}}, {{"id": 1, "label": "..."}}, ...]
+    No prose, no markdown fences."""
+
+def label_clusters(clusters: list[dict], client: Anthropic, model: str) -> dict:
+    """Labels clusters using an LLM and a prompt"""
+    response = client.messages.create(
+        model=model,
+        max_tokens=2048,
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {"type": "text", "text": build_prompt(clusters)},
+                ],
+            }
+        ],
+    )
+    raw = response.content[0].text.strip()
+    return {item["id"]: item["label"] for item in json.loads(raw)}
