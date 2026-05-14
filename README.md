@@ -1,6 +1,7 @@
 # NoteMap
 <p align="center">
-<img width="578" height="499" alt="image" src="https://github.com/user-attachments/assets/4ede21b5-0dfa-4367-ae90-955079516de7">
+<img width="1057" height="451" alt="image" src="https://github.com/user-attachments/assets/c6f1a4a3-c924-476a-825b-ca0fdf1d3216" />
+
 
 
 
