@@ -14,6 +14,10 @@ LAYOUT_PATH = "notemap/graph/layout.json"
 COLOR_SPACE_AMT = 256
 
 
+def power_transform_compress(reduced_embeddings_2d: np.ndarray, p: float):
+    return np.sign(reduced_embeddings_2d) * np.abs(reduced_embeddings_2d) ** p
+
+
 def create_layout(embeddings: np.ndarray,
                   hdb_params: dict, umap1_params: dict, umap2_params: dict, client: Anthropic, model: str, SEED):
     """Builds an importable Serialized Graph object for Graphology. Embeddings are EXPECTED to be 2D.
@@ -56,6 +60,8 @@ def create_layout(embeddings: np.ndarray,
         if hi > lo:
             reduced_embeddings_2d[:, dim] = (col - lo) / (hi - lo) * 2 * CANVAS - CANVAS
 
+
+    #reduced_embeddings_2d = power_transform_compress(reduced_embeddings_2d, p=0.7)
     noise_count = int((node_labels == -1).sum())
     print(f"Unlabeled points: {noise_count}/{len(node_labels)}")
 
