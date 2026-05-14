@@ -4,6 +4,8 @@ import json
 from bokeh.palettes import Category20
 import glasbey
 from sklearn.neighbors import NearestNeighbors
+from sklearn.metrics.pairwise import cosine_distances
+from scipy.sparse.csgraph import minimum_spanning_tree
 from anthropic import Anthropic
 
 
@@ -68,16 +70,25 @@ def create_layout(embeddings: np.ndarray,
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
     data_chunks = manifest["chunks"]
+
+    # Update manifest with centroid nodes
     create_centroid_nodes(reduced_embeddings_2d, node_labels, data_chunks, client, model, k=5)
+
+    # Update manifest with non centroid edges from the MST
+    compute_edges(embeddings, node_labels, data_chunks)
 
     with open(MANIFEST_PATH, 'r') as f:
         manifest = json.load(f)
 
-    data_centroid_chunks = manifest["centroid_chunks"]
 
-    # Update manifest with centroid nodes
+
+    data_centroid_chunks = manifest["centroid_chunks"]
+    data_edges = manifest["edges"]
+
     
     nodes = []
+
+    # Non centroid nodess
     for i, (row, label) in enumerate(zip(data_chunks, node_labels)):
         if label >= 0:
             nodes.append({
@@ -91,7 +102,7 @@ def create_layout(embeddings: np.ndarray,
                 }
             })
     
-
+    # Centroid nodes
     for i, (row, label) in enumerate(zip(data_centroid_chunks, range(num_clusters))):
         if label >= 0:
             nodes.append({
@@ -105,9 +116,18 @@ def create_layout(embeddings: np.ndarray,
                 }
             })
     
+    # Edges
     edges = []
-    # do edges later
-
+    for i, row in enumerate(data_edges):
+        source = row["source"]
+        target = row["target"]
+        edges.append({
+            "key": f"{source}->{target}",
+            "source": source,
+            "target": target,
+            "attributes": row["attributes"]
+        })
+    
     # Write to json layout file for Sigma to render
     data = {"nodes": nodes, "edges": edges}
     with open(LAYOUT_PATH, "w") as f:
@@ -150,7 +170,6 @@ def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.nda
     # Label each cluster with the LLM model
     print("Generating Cluster Labels... ")
     label_response = label_clusters(clusters, client, model)
-    print("Cluster Labels Generated")
 
     for cluster in clusters:
         centroid_entry = {
@@ -165,9 +184,48 @@ def create_centroid_nodes(reduced_embeddings_2d: np.ndarray, node_labels: np.nda
         centroid_nodes.append(centroid_entry)
 
     data["centroid_chunks"] = centroid_nodes
+    
 
     with open(MANIFEST_PATH, 'w') as f:
         json.dump(data, f)
+
+    print("Cluster Labels Generated")
+
+def compute_edges(embeddings: np.ndarray, node_labels: np.ndarray, data_chunks: list[dict]):
+    """Builds a MST from the embeddings to label edges."""
+    valid = [(i, row["chunk_id"]) for i, (row, label) in enumerate(zip(data_chunks, node_labels)) if label >= 0]
+    valid_indices = np.array([i for i, _ in valid])
+    valid_ids = [chunk_id for _, chunk_id in valid]
+
+    filtered_embeddings = embeddings[valid_indices]
+
+    distances = cosine_distances(filtered_embeddings) # N x N
+    mst = minimum_spanning_tree(distances)
+    mst_coo = mst.tocoo()
+
+    with open(MANIFEST_PATH, 'r') as f:
+        data = json.load(f)
+
+    data_edges = [] 
+
+    # row, col is idx_start, idx_end. Use these values to index into node_labels to properly create edges
+    for u, v, weight in zip(mst_coo.row, mst_coo.col, mst_coo.data):
+        edge_entry = {
+            "source" : valid_ids[u],
+            "target" : valid_ids[v],
+            "attributes" : {
+                "size" : 2,
+                "color" : "#000000",
+                "weight" : weight
+            }
+        }
+        data_edges.append(edge_entry)
+    
+    data["edges"] = data_edges
+
+    with open(MANIFEST_PATH, 'w') as f:
+        json.dump(data, f)
+
 
 def build_prompt(clusters: list[dict]) -> str:
     """
