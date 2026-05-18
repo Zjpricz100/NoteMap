@@ -104,7 +104,9 @@ def create_layout(embeddings: np.ndarray,
                     "y": float(reduced_embeddings_2d[i, 1]),
                     "size": 8,
                     "color": str(color_dict[label]),
-                    "label": str(row['summary'])
+                    "label": str(row['summary']),
+                    "image_hash": str(row['image_hash']),
+                    "source_path": str(row['source_path'])
                 }
             })
     
@@ -118,7 +120,9 @@ def create_layout(embeddings: np.ndarray,
                     "y": row['y'],
                     "size": 16,
                     "color": str(color_dict[label]),
-                    "label": str(row['summary'])
+                    "label": str(row['summary']),
+                    "image_hash": "CENTROID",
+                    "source_path": "CENTROID"
                 }
             })
     

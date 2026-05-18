@@ -76,6 +76,7 @@ def load_pdf_embeddings(data_dir: Path, client: OpenAI, model=DEFAULT_MODEL, bat
             "page_number": c.page_number,
             "summary": c.summary,
             "text": c.text,
+            "image_hash": c.image_hash,
             "x": None, # filled
             "y": None
         }

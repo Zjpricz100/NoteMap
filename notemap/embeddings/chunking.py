@@ -10,6 +10,7 @@ class Chunk(BaseModel):
     page_number: int | None # None for pdfs for now
     text: str # The actual content of the chunk
     summary: str # 3-5 word summary of the content of this chunk
+    image_hash: str # hash to the source image
     
 
 def chunks_from_pdf(doc : PDFDocument) -> list[Chunk]:
@@ -22,7 +23,8 @@ def chunks_from_pdf(doc : PDFDocument) -> list[Chunk]:
             source_type="pdf_page",
             page_number=page_num + 1,
             text=page.transcription,
-            summary=page.summary
+            summary=page.summary,
+            image_hash=page.image_hash
         ))
     return chunks
 
