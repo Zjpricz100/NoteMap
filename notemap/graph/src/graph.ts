@@ -24,6 +24,21 @@ async function centerCamera(renderer: Sigma) {
     });
 }
 
+function setupToolTip(renderer: Sigma, graph: Graph): void {
+    const tooltip = document.getElementById("node-tooltip")!;
+    renderer.on("enterNode", ({ node }) => {
+        const attributes = graph.getNodeAttributes(node);
+        // Populate the tooltip
+
+        tooltip.classList.remove("hidden");
+    });
+
+    renderer.on("leaveNode", () => {
+        tooltip.classList.add("hidden");
+    });
+
+}
+
 const graphData = await getGraphData();
 const graph = new Graph();
 
@@ -32,6 +47,9 @@ const renderer = new Sigma(graph, document.getElementById("container") as HTMLEl
 });
 
 graph.import(graphData);
+setupToolTip(renderer, graph);
+
+
 //noverlap.assign(graph, {maxIterations: 50, settings: {margin:5}});
 
 renderer.refresh();
