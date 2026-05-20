@@ -106,7 +106,8 @@ def create_layout(embeddings: np.ndarray,
                     "color": str(color_dict[label]),
                     "label": str(row['summary']),
                     "image_hash": str(row['image_hash']),
-                    "source_path": str(row['source_path'])
+                    "source_path": str(row['source_path']),
+                    "page_number": row['page_number']
                 }
             })
     
@@ -122,7 +123,8 @@ def create_layout(embeddings: np.ndarray,
                     "color": str(color_dict[label]),
                     "label": str(row['summary']),
                     "image_hash": "CENTROID",
-                    "source_path": "CENTROID"
+                    "source_path": "CENTROID",
+                    "page_number": "CENTROID"
                 }
             })
     

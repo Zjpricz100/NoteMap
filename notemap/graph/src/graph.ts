@@ -1,6 +1,14 @@
 import Graph from "graphology";
 import Sigma from "sigma";
 import noverlap from "graphology-layout-noverlap";
+import * as pdfjsLib from "pdfjs-dist";
+declare const __NOTEMAP_ROOT__: string;
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/build/pdf.worker.min.mjs",
+    import.meta.url
+).toString();
+
 
 async function getGraphData() {
     try {
@@ -24,13 +32,73 @@ async function centerCamera(renderer: Sigma) {
     });
 }
 
-function setupToolTip(renderer: Sigma, graph: Graph): void {
-    const tooltip = document.getElementById("node-tooltip")!;
-    renderer.on("enterNode", ({ node }) => {
-        const attributes = graph.getNodeAttributes(node);
-        // Populate the tooltip
+const CMAP_URL = `/@fs${__NOTEMAP_ROOT__}/notemap/graph/node_modules/pdfjs-dist/cmaps/`;
 
+let currentRenderTask: pdfjsLib.RenderTask | null = null;
+let renderGeneration = 0;
+
+async function renderPDFPage(pdfURL: string, pageNumber: number, canvas: HTMLCanvasElement): Promise<void> {
+    const generation = ++renderGeneration;
+    if (currentRenderTask) {
+        currentRenderTask.cancel();
+        currentRenderTask = null;
+    }
+
+    const pdf = await pdfjsLib.getDocument({ url: pdfURL, cMapUrl: CMAP_URL, cMapPacked: true }).promise;
+    if (generation !== renderGeneration) return;
+
+    const page = await pdf.getPage(pageNumber);
+    if (generation !== renderGeneration) return;
+
+    const naturalViewport = page.getViewport({ scale: 1.0 });
+    const scale = canvas.clientWidth / naturalViewport.width;
+    const viewport = page.getViewport({ scale });
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const renderTask = page.render({ canvasContext: ctx, viewport, canvas });
+    currentRenderTask = renderTask;
+    try {
+        await renderTask.promise;
+    } catch (e: any) {
+        if (e?.name !== "RenderingCancelledException") throw e;
+    } finally {
+        if (generation === renderGeneration) currentRenderTask = null;
+    }
+}
+
+function setupToolTip(renderer: Sigma, graph: Graph): void {
+    const canvas = document.getElementById("tooltip-img") as HTMLCanvasElement;
+    const tooltip = document.getElementById("node-tooltip")!;
+    const tooltipSource = document.getElementById("tooltip-source")!;
+const tooltipPage = document.getElementById("tooltip-page")!;
+    const tooltipLabel = document.getElementById("tooltip-label")!;
+
+    renderer.on("enterNode", ({ node }) => {
+        const attrs = graph.getNodeAttributes(node);
+
+        tooltipLabel.textContent = attrs.label;
+
+        // Populate the tooltip
+        if (attrs.source_path === "CENTROID") {
+            tooltipSource.textContent = "Cluster";
+            tooltipPage.textContent = "";
+            canvas.style.display = "none";
+        } else {
+            tooltipSource.textContent = attrs.source_path.split("/").at(-1)!;
+            tooltipPage.textContent = `Page ${attrs.page_number}`;
+            canvas.style.display = "block";
+
+            tooltip.classList.remove("hidden");
+            const pdfUrl = `/@fs${__NOTEMAP_ROOT__}/${attrs.source_path}`;
+            renderPDFPage(pdfUrl, attrs.page_number, canvas);  // your job to write this
+            return;
+        }
         tooltip.classList.remove("hidden");
+
     });
 
     renderer.on("leaveNode", () => {
